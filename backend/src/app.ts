@@ -1,6 +1,6 @@
+import { createRequire } from 'node:module'
 import cors from 'cors'
 import express from 'express'
-import helmet from 'helmet'
 import { env } from './config/env.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { healthRouter } from './routes/health.js'
@@ -8,6 +8,13 @@ import { meRouter } from './routes/me.js'
 import { teamRouter } from './routes/team.js'
 import { reportsRouter } from './routes/reports.js'
 import { metricsRouter } from './routes/metrics.js'
+
+// Resolved via Node's own require() rather than a static import, to sidestep
+// environment-sensitive differences in how helmet's CJS/ESM default export
+// gets typed (worked locally, failed under Vercel's build with a "not
+// callable" error on the same locked dependency version).
+const require = createRequire(import.meta.url)
+const helmet = require('helmet') as typeof import('helmet').default
 
 export const app = express()
 
