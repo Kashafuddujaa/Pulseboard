@@ -16,6 +16,7 @@ for (const key of REQUIRED_VARS) {
 
 export const env = {
   port: Number(process.env.PORT ?? 4000),
+  frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
   databaseUrl: process.env.DATABASE_URL!,
   directUrl: process.env.DIRECT_URL!,
   supabaseUrl: process.env.SUPABASE_URL!,

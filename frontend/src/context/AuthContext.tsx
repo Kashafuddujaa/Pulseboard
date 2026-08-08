@@ -1,66 +1,64 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { MockUser } from '@/types/auth'
+import { supabase } from '@/lib/supabase'
+import { apiFetch } from '@/lib/api'
+import type { AuthUser } from '@/types/auth'
 import { AuthContext, type AuthContextValue } from '@/context/auth-context'
 
-const STORAGE_KEY = 'pulseboard_auth'
-
-interface StoredAuth {
-  user: MockUser
-  token: string
-}
-
-function readStoredAuth(): StoredAuth | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as StoredAuth) : null
-  } catch {
-    return null
-  }
-}
-
-function mockDelay(ms = 500) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+interface MeResponse {
+  profile: { id: string; email: string; name: string }
+  workspace: { id: string; name: string }
+  role: AuthUser['role']
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<MockUser | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
 
+  const bootstrapUser = async () => {
+    const me = await apiFetch<MeResponse>('/me')
+    setUser({
+      id: me.profile.id,
+      name: me.profile.name,
+      email: me.profile.email,
+      workspaceId: me.workspace.id,
+      workspaceName: me.workspace.name,
+      role: me.role,
+    })
+  }
+
   useEffect(() => {
-    const stored = readStoredAuth()
-    if (stored) setUser(stored.user)
-    setIsInitializing(false)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null)
+        setIsInitializing(false)
+        return
+      }
+      bootstrapUser().finally(() => setIsInitializing(false))
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const persist = (nextUser: MockUser) => {
-    const record: StoredAuth = { user: nextUser, token: `mock-token-${nextUser.id}` }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
-    setUser(nextUser)
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw new Error(error.message)
+    await bootstrapUser()
   }
 
-  const login = async (email: string, _password: string) => {
-    await mockDelay()
-    const name = email.split('@')[0]?.replace(/[._]/g, ' ') || 'User'
-    persist({
-      id: `user-${email}`,
-      name: name.replace(/\b\w/g, (c) => c.toUpperCase()),
+  const signup = async (name: string, email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
       email,
-      workspaceName: 'My Workspace',
+      password,
+      options: { data: { name } },
     })
+    if (error) throw new Error(error.message)
+    await bootstrapUser()
   }
 
-  const signup = async (name: string, email: string, _password: string) => {
-    await mockDelay()
-    persist({
-      id: `user-${email}`,
-      name,
-      email,
-      workspaceName: `${name.split(' ')[0]}'s Workspace`,
-    })
-  }
-
-  const logout = () => {
-    localStorage.removeItem(STORAGE_KEY)
+  const logout = async () => {
+    await supabase.auth.signOut()
     setUser(null)
   }
 

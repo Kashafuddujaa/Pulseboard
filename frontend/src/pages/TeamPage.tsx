@@ -1,41 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { MembersTable } from '@/components/team/MembersTable'
 import { InviteMemberModal } from '@/components/team/InviteMemberModal'
-import { initialTeamMembers } from '@/mocks/team'
+import { apiFetch } from '@/lib/api'
 import type { Role, TeamMember } from '@/types/team'
 
-let memberCounter = 0
-
 export function TeamPage() {
-  const [members, setMembers] = useState<TeamMember[]>(initialTeamMembers)
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
 
-  const handleInvite = (email: string, role: Role) => {
-    memberCounter += 1
-    setMembers((prev) => [
-      ...prev,
-      {
-        id: `t-new-${memberCounter}`,
-        name: email.split('@')[0],
-        email,
-        role,
-        status: 'pending',
-        joinedAt: new Date().toISOString(),
-      },
-    ])
+  useEffect(() => {
+    apiFetch<TeamMember[]>('/team/members')
+      .then(setMembers)
+      .catch((err) =>
+        setLoadError(err instanceof Error ? err.message : 'Failed to load team'),
+      )
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  const handleInvite = async (email: string, role: Role) => {
+    const member = await apiFetch<TeamMember>('/team/members', {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    })
+    setMembers((prev) => [...prev, member])
   }
 
-  const handleRoleChange = (member: TeamMember, role: Role) => {
-    setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, role } : m)))
+  const handleRoleChange = async (member: TeamMember, role: Role) => {
+    const updated = await apiFetch<TeamMember>(`/team/members/${member.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    })
+    setMembers((prev) => prev.map((m) => (m.id === member.id ? updated : m)))
   }
 
-  const handleConfirmRemove = () => {
+  const handleConfirmRemove = async () => {
     if (!memberToRemove) return
+    await apiFetch(`/team/members/${memberToRemove.id}`, { method: 'DELETE' })
     setMembers((prev) => prev.filter((m) => m.id !== memberToRemove.id))
     setMemberToRemove(null)
   }
@@ -56,11 +63,17 @@ export function TeamPage() {
       </div>
 
       <Card>
-        <MembersTable
-          members={members}
-          onRoleChange={handleRoleChange}
-          onRemove={setMemberToRemove}
-        />
+        {isLoading ? (
+          <p className="p-6 text-sm text-text-secondary">Loading team...</p>
+        ) : loadError ? (
+          <p className="p-6 text-sm text-danger">{loadError}</p>
+        ) : (
+          <MembersTable
+            members={members}
+            onRoleChange={handleRoleChange}
+            onRemove={setMemberToRemove}
+          />
+        )}
       </Card>
 
       <InviteMemberModal

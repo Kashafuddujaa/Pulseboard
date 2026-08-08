@@ -12,23 +12,32 @@ export function InviteMemberModal({
 }: {
   open: boolean
   onClose: () => void
-  onInvite: (email: string, role: Role) => void
+  onInvite: (email: string, role: Role) => Promise<void>
 }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<Role>('editor')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Enter a valid email address')
       return
     }
-    onInvite(email, role)
-    setEmail('')
-    setRole('editor')
-    setError('')
-    onClose()
+
+    setIsSubmitting(true)
+    try {
+      await onInvite(email, role)
+      setEmail('')
+      setRole('editor')
+      setError('')
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send invite')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -51,7 +60,9 @@ export function InviteMemberModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">Send invite</Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            Send invite
+          </Button>
         </div>
       </form>
     </Modal>
