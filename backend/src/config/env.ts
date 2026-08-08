@@ -5,7 +5,6 @@ const REQUIRED_VARS = [
   'DIRECT_URL',
   'SUPABASE_URL',
   'SUPABASE_ANON_KEY',
-  'SUPABASE_JWT_SECRET',
 ] as const
 
 for (const key of REQUIRED_VARS) {
@@ -20,5 +19,4 @@ export const env = {
   directUrl: process.env.DIRECT_URL!,
   supabaseUrl: process.env.SUPABASE_URL!,
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY!,
-  supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET!,
 }
