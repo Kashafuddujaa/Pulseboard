@@ -1,0 +1,108 @@
+// PulseBoard API — Prisma schema
+// Connects to Supabase Postgres. `directUrl` (non-pooled, port 5432) is used
+// only for migrations; `url` (pooled via pgbouncer, port 6543) is used by the
+// app at runtime. See backend/.env.example for both connection strings.
+//
+// Note on Row Level Security: these tables are only ever accessed through
+// this Express API using the trusted server-side connection string, not
+// through Supabase's PostgREST/anon-key path. So Postgres RLS isn't the
+// access-control boundary here — the Express auth middleware is.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// One row per Supabase-authenticated user (auth.users.id), created lazily
+/// on first authenticated request via GET /api/me.
+model Profile {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
+  memberships     WorkspaceMember[]
+  createdReports  Report[]
+
+  @@map("profiles")
+}
+
+model Workspace {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  ownerId   String   @db.Uuid
+  owner     Profile  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+
+  members WorkspaceMember[]
+  reports Report[]
+
+  @@map("workspaces")
+}
+
+enum Role {
+  owner
+  admin
+  editor
+  viewer
+}
+
+enum MemberStatus {
+  active
+  pending
+}
+
+model WorkspaceMember {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId String       @db.Uuid
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profileId   String       @db.Uuid
+  profile     Profile      @relation(fields: [profileId], references: [id])
+  role        Role
+  status      MemberStatus @default(active)
+  joinedAt    DateTime     @default(now())
+
+  @@unique([workspaceId, profileId])
+  @@map("workspace_members")
+}
+
+enum ReportType {
+  sales
+  traffic
+  team_activity
+  custom
+}
+
+enum ReportStatus {
+  ready
+  generating
+  failed
+}
+
+model Report {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId String       @db.Uuid
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  type        ReportType
+  status      ReportStatus @default(generating)
+  createdById String       @db.Uuid
+  createdBy   Profile      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  /// Array of { label, value } lines shown in the report preview, mirrors
+  /// the frontend's ReportMetricLine[] shape. Populated once status = ready.
+  metrics     Json         @default("[]")
+
+  @@map("reports")
+}
+
+// TODO(#3 – dashboard metrics API): metric ingestion/storage schema
+// (time-series values backing StatMetric/trend/channel/device breakdowns)
+// is intentionally not designed yet — will be added in the metrics-API PR
+// once the ingestion source/shape is decided, rather than guessed at here.
