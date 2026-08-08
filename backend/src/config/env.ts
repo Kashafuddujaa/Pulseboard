@@ -5,6 +5,7 @@ const REQUIRED_VARS = [
   'DIRECT_URL',
   'SUPABASE_URL',
   'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
 ] as const
 
 for (const key of REQUIRED_VARS) {
@@ -19,4 +20,5 @@ export const env = {
   directUrl: process.env.DIRECT_URL!,
   supabaseUrl: process.env.SUPABASE_URL!,
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY!,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
 }

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
+import { getCallerMembership } from '../lib/workspace.js'
 
 export const meRouter = Router()
 
@@ -25,10 +26,7 @@ meRouter.get('/me', requireAuth, async (req, res, next) => {
       },
     })
 
-    let membership = await prisma.workspaceMember.findFirst({
-      where: { profileId: profile.id },
-      include: { workspace: true },
-    })
+    let membership = await getCallerMembership(profile.id)
 
     if (!membership) {
       const workspace = await prisma.workspace.create({
