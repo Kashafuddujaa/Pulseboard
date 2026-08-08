@@ -15,11 +15,13 @@ export function LoginPage() {
 
   const [values, setValues] = useState<LoginFormValues>({ email: '', password: '' })
   const [errors, setErrors] = useState<FormErrors<LoginFormValues>>({})
+  const [formError, setFormError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const validationErrors = validateLogin(values)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
@@ -28,6 +30,8 @@ export function LoginPage() {
     try {
       await login(values.email, values.password)
       navigate(from, { replace: true })
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to sign in')
     } finally {
       setIsSubmitting(false)
     }
@@ -42,6 +46,12 @@ export function LoginPage() {
         </p>
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+          {formError && (
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+              {formError}
+            </p>
+          )}
+
           <Input
             label="Email"
             type="email"
