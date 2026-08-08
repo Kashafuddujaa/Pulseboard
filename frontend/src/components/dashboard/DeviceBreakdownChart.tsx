@@ -17,8 +17,8 @@ export function DeviceBreakdownChart({ data }: { data: DeviceDatum[] }) {
               data={data}
               dataKey="value"
               nameKey="device"
-              innerRadius="55%"
-              outerRadius="80%"
+              innerRadius="50%"
+              outerRadius="70%"
               paddingAngle={2}
               label={({ name, value }) => `${name} ${value}%`}
               labelLine={false}
