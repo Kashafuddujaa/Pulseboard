@@ -7,6 +7,7 @@ import { healthRouter } from './routes/health.js'
 import { meRouter } from './routes/me.js'
 import { teamRouter } from './routes/team.js'
 import { reportsRouter } from './routes/reports.js'
+import { metricsRouter } from './routes/metrics.js'
 
 export const app = express()
 
@@ -18,5 +19,6 @@ app.use('/api', healthRouter)
 app.use('/api', meRouter)
 app.use('/api', teamRouter)
 app.use('/api', reportsRouter)
+app.use('/api', metricsRouter)
 
 app.use(errorHandler)
