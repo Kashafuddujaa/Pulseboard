@@ -23,20 +23,36 @@ export function GenerateReportModal({
 }: {
   open: boolean
   onClose: () => void
-  onGenerate: (values: GenerateReportFormValues) => void
+  onGenerate: (values: GenerateReportFormValues) => Promise<void>
 }) {
   const [type, setType] = useState<ReportType>('sales')
   const [range, setRange] = useState<'7' | '30' | '90'>('30')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    onGenerate({ type, range })
-    onClose()
+    setIsSubmitting(true)
+    try {
+      await onGenerate({ type, range })
+      setError('')
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate report')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <Modal open={open} onClose={onClose} title="Generate report">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {error && (
+          <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+            {error}
+          </p>
+        )}
+
         <Select
           label="Report type"
           value={type}
@@ -63,7 +79,9 @@ export function GenerateReportModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">Generate</Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            Generate
+          </Button>
         </div>
       </form>
     </Modal>
