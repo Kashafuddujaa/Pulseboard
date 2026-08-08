@@ -1,13 +1,13 @@
 import { createContext } from 'react'
-import type { MockUser } from '@/types/auth'
+import type { AuthUser } from '@/types/auth'
 
 export interface AuthContextValue {
-  user: MockUser | null
+  user: AuthUser | null
   isAuthenticated: boolean
   isInitializing: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
