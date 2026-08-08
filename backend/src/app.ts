@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import { errorHandler } from './middleware/errorHandler.js'
 import { healthRouter } from './routes/health.js'
 import { meRouter } from './routes/me.js'
+import { teamRouter } from './routes/team.js'
 
 export const app = express()
 
@@ -13,5 +14,6 @@ app.use(express.json())
 
 app.use('/api', healthRouter)
 app.use('/api', meRouter)
+app.use('/api', teamRouter)
 
 app.use(errorHandler)
