@@ -1,4 +1,8 @@
-import type { MetricPoint, TrendSeriesPoint } from '@/types/metrics'
+// Deterministic demo-data generator, ported from the frontend's original
+// mock generator. There's no real analytics pipeline (Stripe/GA/etc.)
+// connected to PulseBoard, so these numbers are honest demo data — but now
+// genuinely served from the backend and seeded per-workspace, so different
+// workspaces see different-but-stable numbers instead of a hardcoded bundle.
 
 function mulberry32(seed: number) {
   let a = seed
@@ -16,6 +20,14 @@ function isoDateDaysAgo(days: number) {
   d.setUTCHours(0, 0, 0, 0)
   d.setUTCDate(d.getUTCDate() - days)
   return d.toISOString().slice(0, 10)
+}
+
+export function seedFromWorkspaceId(workspaceId: string) {
+  let h = 0
+  for (let i = 0; i < workspaceId.length; i++) {
+    h = (Math.imul(31, h) + workspaceId.charCodeAt(i)) | 0
+  }
+  return h
 }
 
 interface SeriesOptions {
@@ -38,6 +50,17 @@ function rawSeries({ days, base, volatility, growth, seed }: SeriesOptions) {
   return values
 }
 
+export interface MetricPoint {
+  date: string
+  value: number
+}
+
+export interface TrendSeriesPoint {
+  date: string
+  current: number
+  previous: number
+}
+
 export function generateTrend(options: SeriesOptions): MetricPoint[] {
   const values = rawSeries(options)
   return values.map((value, i) => ({
@@ -48,7 +71,11 @@ export function generateTrend(options: SeriesOptions): MetricPoint[] {
 
 export function generateComparisonSeries(options: SeriesOptions): TrendSeriesPoint[] {
   const current = rawSeries(options)
-  const previous = rawSeries({ ...options, seed: options.seed + 1000, growth: options.growth * 0.4 })
+  const previous = rawSeries({
+    ...options,
+    seed: options.seed + 1000,
+    growth: options.growth * 0.4,
+  })
   return current.map((value, i) => ({
     date: isoDateDaysAgo(options.days - 1 - i),
     current: Math.round(value),
