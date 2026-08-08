@@ -23,10 +23,12 @@ export function SignupPage() {
 
   const [values, setValues] = useState<SignupFormValues>(INITIAL_VALUES)
   const [errors, setErrors] = useState<FormErrors<SignupFormValues>>({})
+  const [formError, setFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    setFormError('')
     const validationErrors = validateSignup(values)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
@@ -35,6 +37,8 @@ export function SignupPage() {
     try {
       await signup(values.name, values.email, values.password)
       navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {
       setIsSubmitting(false)
     }
@@ -55,6 +59,12 @@ export function SignupPage() {
         </p>
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+          {formError && (
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+              {formError}
+            </p>
+          )}
+
           <Input
             label="Full name"
             name="name"
